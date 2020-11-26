@@ -1,0 +1,112 @@
+---
+title: "SME 0806 - Estatística Computacional - Trabalho 2"
+header-includes:
+   - \usepackage{float}
+   - \usepackage{here}
+   - \usepackage[brazil]{babel}
+   - \usepackage{caption}
+   - \usepackage{mathtools}
+   - \usepackage{setspace}\onehalfspacing
+output:
+  pdf_document: default
+  fig_caption: yes
+  urlcolor: blue
+  linkcolor: blue
+  fontsize: 12pt
+  geometry: margin=0.75in
+fig_width: 10
+fig_height: 6
+---
+
+```{r include=FALSE}
+library(tidyverse)
+library(reshape2)
+```
+# Introdução
+
+Este relatório visa responder as duas questões apresentadas no segundo trabalho proposto na aula de SME0806 - Estatística Computacional, para  resolução destes exercícios usou-se a teoria aprendida em sala de aula e o software R.
+
+# Exercício 1
+
+**a)** 
+
+### Leitura dos dados  
+
+```{r echo = TRUE, warning=FALSE}
+x <- c( 8406, 2342, 8187, 8459, 4795, 3516, 4796, 10238)
+y <- c(-1200, 2601, -2705, 1982, -1290, 351, -638, -2719)
+```
+
+\newpage
+
+### Função bootstrap
+
+Primeiramente é feita uma função, que dado um B produz um vetor de valores reamostrados por meio do algoritmo bootstrap para estimar $\theta = E(X)/ E(Y)$ se $E(Y) \neq 0$
+
+```{r echo = TRUE, warning=FALSE}
+gera_est_thetae <- function(X, Y, B){
+  thetae <- c()
+  for (b in 1:B) {
+    Ex <- mean(sample(X, length(X), replace = T))
+    Ey <- mean(sample(Y, length(Y), replace = T))
+    while(Ey == 0){
+      Ey <- mean(sample(Y, length(Y), replace = T))
+    }
+    thetae[b] <- Ex/Ey
+  }
+  return(thetae)
+}
+```
+
+### Gerando amostras bootstraps para diferentes B
+
+Com a função geradora de estimativas bootstraps pronta para gerar dado algum B, podemos gerar e guardar várias estimativas para diferentes B, escolhemos gerar estimativas para tamanhos de B de 1 até 2000.
+
+```{r echo = TRUE, warning=FALSE}
+est_thetae <- c()
+sd_thetae <- c()
+B <- 2000
+for (b in 1:B) {
+  g_est_thetae = gera_est_thetae(x, y, b)
+  est_thetae[b] <- mean(g_est_thetae)
+  sd_thetae[b] = sd(g_est_thetae)             #desvio padrão dos thetae em cada B
+}
+
+theta <- mean(x)/mean(y) # Estimativa
+est_thetaec <- 2 * theta - est_thetae # Correção de viés de cada B
+sd_thetaec = sd(est_thetaec)             #desvio padrão das estimativas corrigidas des cada B
+```
+
+\newpage
+### Gráfico
+
+```{r echo = TRUE, warning=FALSE}
+Dados = cbind(est_thetae, est_thetaec)
+Data = melt(Dados) #A função melt decompõe a base,categorizando os valores pela variável
+Data = as.data.frame(Data)
+
+Data %>% ggplot() +
+ aes(x = Var1, y = value, colour = Var2) +
+ geom_point(size = 1.5) +
+ labs(colour = NULL) +
+ scale_color_hue(lab = c("Não corrigido", "Corrigido") ) + ylim(-200, 200) +
+ geom_abline(aes(intercept = theta, slope = 0, linetype = "dashed")) +
+ scale_linetype_manual(name = NULL, values = c("dashed"), 
+                      labels=c("estimativa de theta \n (= -14.02405)"))+
+ scale_x_continuous(trans = "log10") +
+ xlab("B (escala log10)") + ylab("Estimativa")
+```
+
+\newpage
+
+**b)** Erro Padrão e Estimativas
+
+Estimativa de $\theta$= ``r theta ``
+
+Estimativa bootstrap em B = 2000: ``r est_thetae[B] `` 
+
+Erro Padrão da estimativa bootstrap em B = 2000: ``r sd_thetae[B] `` 
+
+Estimativa bootstrap corrigida em B = 2000: ``r est_thetaec[B] ``
+
+Erro Padrão das estimativas corrigidas geradas: ``r sd_thetaec `` 
